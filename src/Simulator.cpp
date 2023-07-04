@@ -50,7 +50,6 @@ void Simulator::runSimulation() {
 
     std::cout<<"Reading Inst From Json"<<std::endl;
     chip_ptr->readInstFromJson(json_inst);
-    std::cout<<"here";
     chip_ptr->network.readLatencyEnergyFile(parent_path.string());
     std::cout<<"Read finish"<<std::endl;
 

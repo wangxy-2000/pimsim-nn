@@ -1,0 +1,13 @@
+==========================================
+README for the SystemC 2.3.4 documentation
+==========================================
+
+This directory contains
+
+doxygen/ 
+
+  A folder containing a command file (template) for doxygen which may be
+  used to generate browseable documentation of the SystemC class library.
+  Please see www.doxygen.org for usage.
+
+README - this file.

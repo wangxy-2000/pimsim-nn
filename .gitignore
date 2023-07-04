@@ -1,0 +1,7 @@
+.vscode/
+.clion/
+build/
+.xmake/
+xmake.lua
+external.lua
+CMakeLists.txt.back

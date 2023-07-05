@@ -1,6 +1,8 @@
 # pimsim-nn
 
-Pimsim-nn是一个面向RRAM神经网络加速器的模拟器，在给定架构配置和指令序列后可模拟得到性能和能耗情况。
+Pimsim-nn是一个面向RRAM存算一体神经网络加速器的模拟器，在给定架构配置和指令序列后可模拟得到性能（推理时间、吞吐量）和能耗、功耗情况。
+
+Pimsim-nn需要和一个配套的编译器[pimcomp-nn](https://github.com/sunxt99/PIMCOMP-NN)一起使用。编译器接收ONNX文件和架构配置（与pimsim-nn使用的架构配置一致）作为输入，生成指令序列。
 
 ## 使用方法
 
@@ -11,7 +13,8 @@ Pimsim-nn是一个面向RRAM神经网络加速器的模拟器，在给定架构�
 本项目使用cmake进行构建，执行如下代码进行构建
 ```shell
 cd pimsim-nn
-mkdir build && cd build 
+mkdir build
+cd build 
 cmake ..
 make 
 ```
@@ -76,7 +79,7 @@ core的架构类似于一个RISC处理器，但是带有4个专用的处理单�
 - NoC配置文件
 - 程序指令序列文件
 
-架构配置文件需要配置模拟器中各个部件的延迟和功耗信息。NoC配置文件给出了NoC的延迟和功耗信息。NoC配置本质上是架构配置的一部分，但因为NoC配置参数过多，因此独立成一个文件。方便起见，在架构配置中有一个参数指定了NoC配置文件地址，模拟器会自动加载NoC配置。程序指令序列由编译器生成。
+架构配置文件需要配置模拟器中各个部件的延迟和功耗信息。NoC配置文件给出了NoC的延迟和功耗信息。NoC配置本质上是架构配置的一部分，但因为NoC配置参数过多，因此独立成一个文件。方便起见，在架构配置中有一个参数指定了NoC配置文件地址，模拟器会自动加载NoC配置。程序指令序列由编译器[pimcomp-nn](https://github.com/sunxt99/PIMCOMP-NN)生成。
 
 最终模拟器需要输入两个参数，一个是程序指令序列文件的地址，另一个是架构配置文件的地址
 
@@ -92,9 +95,12 @@ ChipTest  path_to_program_instructions_file  path_to_archtecture_configuration_f
 | sim_mode             | 当设置为0时，模拟器会假设存在大量输入，给出吞吐率的信息，当设置为1时，模拟器会模拟单个输入情况下的延迟能耗情况 |
 | report_verbose_level | 当设置为0时，模拟器会给出芯片级别的性能和能耗信息，当设置为1时，还会同时给出每个核的信息。 |
 
-## 作者
+## 代码作者
 
-- [Xinyu Wang](wangxinyu22s@ict.ac.cn) (Institute of Computing Technology,CAS)
+- [Xinyu Wang](wangxinyu22s@ict.ac.cn) (中国科学院计算技术研究所)
+
+## 项目负责人
+- [Xiaoming Chen](https://people.ucas.edu.cn/~chenxm)
 
 ## 鸣谢
 - [systemc](https://github.com/accellera-official/systemc)

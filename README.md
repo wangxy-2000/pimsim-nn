@@ -4,6 +4,8 @@ Pimsim-nn is a simulator designed for RRAM-/PIM-based neural network accelerator
 
 Pimsim-nn should be used with an associated compiler, [pimcomp-nn](https://github.com/sunxt99/PIMCOMP-NN). The compiler accepts an ONNX file and the architecture configuration (same as the architecture configuration used in pimsim-nn) as inputs and produces the instruction sequence.
 
+The ISA of PIMSIM-NN is based on the document published [here](https://arxiv.org/abs/2308.06449).
+
 
 ## Usage
 

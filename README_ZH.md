@@ -4,6 +4,8 @@ Pimsim-nn是一个面向RRAM存算一体神经网络加速器的模拟器，在�
 
 Pimsim-nn需要和一个配套的编译器[pimcomp-nn](https://github.com/sunxt99/PIMCOMP-NN)一起使用。编译器接收ONNX文件和架构配置（与pimsim-nn使用的架构配置一致）作为输入，生成指令序列。
 
+PIMSIM-NN所使用的指令集发表在[这儿](https://arxiv.org/abs/2308.06449)。
+
 ## 使用方法
 
 ### 软件要求

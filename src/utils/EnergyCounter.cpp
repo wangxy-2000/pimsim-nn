@@ -56,7 +56,7 @@ void EnergyCounter::setStaticPowerMW(double power) {
 }
 
 void EnergyCounter::setRunningTimeNS(double time) {
-    assert(time > 0);
+    assert(time >= 0);
     running_time = time;
     is_set_running_time = true;
 }
@@ -110,6 +110,11 @@ void EnergyCounter::initialize() {
     dynamic_time_tag = std::map<int,sc_core::sc_time> ();
     running_time = 0;
     is_set_running_time = false;
+}
+
+std::ostream &operator<<(std::ostream &out, const EnergyCounter &counter) {
+    out << "dynamic energy: "<<counter.dynamic_energy<<"static energy: "<<counter.getStaticEnergyPJ()<<" time: "<<counter.running_time<<" static power: "<<counter.static_power;
+    return out;
 }
 
 

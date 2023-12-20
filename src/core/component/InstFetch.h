@@ -32,7 +32,7 @@ public:
     void readInstFromJson(const nlohmann::json & json_inst);
 
     // Update PC and Fetch Inst
-    void process();
+    void me_processFetchUpdate();
 
     std::string getStatus();
 
@@ -50,10 +50,9 @@ private:
     sc_signal<bool> pc_reset;
 public:
 
-    sc_in<bool> if_enable;
-    sc_out<bool> if_stall;
+    sc_in<bool> id_ready_port;
 
-    sc_out<DecodeInfo> if_id_port;
+    sc_out<VP<DecodeInfo>> if_id_port;
 };
 
 

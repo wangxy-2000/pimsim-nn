@@ -9,14 +9,15 @@
 
 
 TransferUnit::TransferUnit(const sc_module_name &name, const CoreConfig &config,const SimConfig& sim_config,Core* core_ptr,ClockDomain* clk,int core_id)
-: BaseCoreModule(name,config,sim_config,core_ptr,clk),
+: BaseCoreModule(name,config,sim_config,core_ptr,clk), pulse_commit("pulse_commit",clk),
   core_id(core_id),
   memory_socket("memory_socket"), switch_socket("switch_socket",&switch_finish_trigger),
   transfer_fsm_reg("transfer_fsm", clk){
 
     transfer_fsm_reg.input.bind(transfer_fsm_in);
-    transfer_fsm_reg.output.bind(transfer_fsm_out);
+    transfer_fsm_reg.in_ready.bind(transfer_ready_port);
 
+    pulse_commit.out_port.bind(transfer_commit_port);
 
     switch_socket.registerReceiveHandler(std::bind(
             &TransferUnit::switchReceiveHandler,this,std::placeholders::_1,std::placeholders::_2));
@@ -25,19 +26,27 @@ TransferUnit::TransferUnit(const sc_module_name &name, const CoreConfig &config,
 
     SC_THREAD(process);
 
-    SC_METHOD(checkTransferInst);
-    sensitive<<id_transfer_port;
+    SC_METHOD(me_checkTransferInst);
+    sensitive << transfer_port;
+
 
     energy_counter.setStaticPowerMW(config.transfer_static_power);
 }
 
-void TransferUnit::checkTransferInst() {
-    auto transfer_info = id_transfer_port.read();
-
-    if (is_payload_valid(transfer_info))
-        transfer_fsm_in.write({transfer_info, true});
+void TransferUnit::me_checkTransferInst() {
+    const auto& cur_info = transfer_port.read();
+    if (cur_info.valid and cur_info.payload.exec_unit == +ExecType::Transfer)
+        transfer_fsm_in.write(cur_info);
     else
-        transfer_fsm_in.write({transfer_info, false});
+        transfer_fsm_in.write({ExecInfo(),false});
+
+
+//    auto transfer_info = transfer_port.read();
+//
+//    if (is_payload_valid(transfer_info))
+//        transfer_fsm_in.write({transfer_info, true});
+//    else
+//        transfer_fsm_in.write({transfer_info, false});
 
 }
 
@@ -46,17 +55,22 @@ void TransferUnit::process()  {
         // wait for new transfer inst
         wait(transfer_fsm_reg.start_exec);
 
-        // stall pipeline
-        transfer_busy_port.write(true);
 
-        auto transfer_info = transfer_fsm_out.read();
-        auto op = transfer_info.op;
+        // stall pipeline
+        // fsm will auto set ready to false
+        // transfer_busy_port.write(true);
+
+        const auto& exec_info = transfer_fsm_reg.read();
+        auto transfer_info = exec_info.getTransferInfo();
+        const auto& op = transfer_info.op;
 
         switch (op) {
             case Opcode::send :
+//                std::cout<<getStatus()<<std::endl;
                 processSendInst(transfer_info);
                 break;
             case Opcode::recv:
+//                std::cout<<getStatus()<<std::endl;
                 processRecvInst(transfer_info);
                 break;
             case Opcode::sync:
@@ -75,12 +89,13 @@ void TransferUnit::process()  {
         // exec finish
 
         // restore pipe line
-        transfer_busy_port.write(false);
+        // fsm will auto set ready to true
+        // transfer_busy_port.write(false);
+
         // reset fsm
-        transfer_fsm_reg.finish_exec.notify(SC_ZERO_TIME);
-        if (sim_config.sim_mode == 1)
-            if (isEndPC(transfer_info.pc))
-                core_ptr->setFinish();
+//        transfer_fsm_reg.finish_exec.notify(SC_ZERO_TIME);
+        transfer_fsm_reg.finishExec([this,exec_info]{pulse_commit.write(exec_info);});
+
 
         // TODO dynamic energy
     }
@@ -188,7 +203,7 @@ void TransferUnit::switchReceiveHandler(std::shared_ptr<NetworkPayload> trans, s
 
 }
 
-void TransferUnit::processSendInst(TransferInfo &transfer_info) {
+void TransferUnit::processSendInst(const TransferInfo &transfer_info) {
     // first sender send request and wait for receiver's permission then read local memory and transfer data
 
     auto receiver_core_id = transfer_info.core;
@@ -250,7 +265,7 @@ void TransferUnit::processSendInst(TransferInfo &transfer_info) {
     send_receiver_core_id = -1;
 }
 
-void TransferUnit::processRecvInst(TransferInfo &transfer_info) {
+void TransferUnit::processRecvInst(const TransferInfo &transfer_info) {
     auto sender_core_id = transfer_info.core;
     // set basic info
     recv_sender_core_id = sender_core_id;
@@ -297,7 +312,7 @@ void TransferUnit::processRecvInst(TransferInfo &transfer_info) {
     // finish recv
 }
 
-void TransferUnit::processSyncInst(TransferInfo &transfer_info) {
+void TransferUnit::processSyncInst(const TransferInfo &transfer_info) {
     // send sync info to another core
     auto event_register_addr = transfer_info.event_register;
     auto dst_core = transfer_info.core;
@@ -318,7 +333,7 @@ void TransferUnit::processSyncInst(TransferInfo &transfer_info) {
     wait(core_config.period, sc_core::SC_NS);
 }
 
-void TransferUnit::processWaitInst(TransferInfo &transfer_info) {
+void TransferUnit::processWaitInst(const TransferInfo &transfer_info) {
     auto event_register_addr = transfer_info.event_register;
     auto wait_value = transfer_info.wait_value;
 
@@ -337,7 +352,7 @@ void TransferUnit::processWaitInst(TransferInfo &transfer_info) {
     wait_ev_value = -1;
 }
 
-void TransferUnit::processGlobalMemoryInst(TransferInfo &transfer_info) {
+void TransferUnit::processGlobalMemoryInst(const TransferInfo &transfer_info) {
     auto op = transfer_info.op;
     // ld st lldi lmv
 
@@ -404,7 +419,7 @@ void TransferUnit::processGlobalMemoryInst(TransferInfo &transfer_info) {
     else if (op == +Opcode::lldi){ // local memory
         auto addr = transfer_info.rd_value;
         auto imm = transfer_info.imm;
-        auto size = transfer_info.size;
+        auto size = transfer_info.len;
 
         auto trans = TransactionPayload{
             .command=TransCommand::write,.addr=addr,.data_size=size,.data_ptr=nullptr
@@ -420,7 +435,7 @@ void TransferUnit::processGlobalMemoryInst(TransferInfo &transfer_info) {
         // different from vmv, lmv done without stride
         auto read_addr = transfer_info.rs1_value;
         auto write_addr = transfer_info.rd_value;
-        auto size = transfer_info.size;
+        auto size = transfer_info.len;
 
         auto read_trans = TransactionPayload{
             .command=TransCommand::read,.addr=read_addr,.data_size=size,.data_ptr=nullptr
@@ -442,10 +457,12 @@ void TransferUnit::processGlobalMemoryInst(TransferInfo &transfer_info) {
 std::string TransferUnit::getStatus() {
     std::stringstream  s;
 
-    auto transfer_info = transfer_fsm_out.read();
+    s<<"Core:"<<core_ptr->getCoreID()<<"Transfer> time: "<<sc_time_stamp()<<"\n";
 
-    s<<"Transfer> "<<"time:"<<sc_time_stamp().to_string()<<"\n"
-    <<"pc:"<<transfer_info.pc<<" op:"<<transfer_info.op._to_string()<<"\n\n";
+    const auto& cur_info = transfer_fsm_reg.read();
+
+    s<<cur_info<<"\n";
 
     return s.str();
 }
+

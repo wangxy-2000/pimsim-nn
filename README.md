@@ -33,18 +33,18 @@ In `build` directory, checkout executable file `ChipTest`.
 There is a built-in resnet-18 example. Configuration and instructions file is under folder `test/resnet18`. Use codes below to simulate resnet-18:
 
 ```shell
-ChipTest ~/pimsim-nn/test/resnet18/full.gz ~/pimsim-nn/test/resnet18/config.json
+./ChipTest ../example/resnet18.gz ../example/config/latency_config.json
 ```
 outputs:
 ```shell
-        SystemC 2.3.4-Accellera --- Jul  4 2023 15:44:33
+        SystemC 2.3.4-Accellera --- Dec 20 2023 21:10:27
         Copyright (c) 1996-2022 by all Contributors,
         ALL RIGHTS RESERVED
-Loading Inst and Config
+Loading Inst and Config ---
 Load finish
-Reading Inst From Json
-hereRead finish
-Start Simulation
+Reading Instructions From File ---
+Read finish
+Start Simulation ---
 Progress --- <10%>
 Progress --- <20%>
 Progress --- <30%>
@@ -55,27 +55,26 @@ Progress --- <70%>
 Progress --- <80%>
 Progress --- <90%>
 Simulation Finish
+simulator execution time:59.4615s
 |*************** Simulation Report ***************|
 Basic Information:
-  - config file:        ../test/resnet18/config.json
-  - inst file:          ../test/resnet18/full.gz
+  - config file:        ../example/config/latency_config.json
+  - inst file:          ../example/resnet18.gz
   - verbose level:      0
-  - core count:         136
+  - core count:         64
   - simulation mode:    0
-  - simulation time:    200 ms
+  - simulation time:    100 ms
 Chip Simulation Result:
-  - output count:       2.24 samples
-  - throughput:         11.2 samples/s
-  - average latency:    89.5 ms
-  - average power:      6.09e+03 mW
-  - average energy:     5.45e+11 pJ/it
+  - output count:       4 samples
+  - throughput:         40 samples/s
+  - average latency:    25 ms
 ```
 
 ## Architecture
 
 Pimsim-nn assumes a chip consists of many cores connected via NoC, and the core architecture is shown below:
 
-![image-20230704172641128](https://s2.loli.net/2023/07/04/Y9ZeKzpTORIiakJ.png)
+![Drawing2.png](https://s2.loli.net/2023/12/20/DCyJl81rfTSxqG7.png)
 
 The architecture of core is very similar to a RISC processor, but with four dedicated execute units, namely Scalar Unit, Vector Unit, Matrix Unit and Transfer Unit. **Scalar Unit** is used to process scalar operations. **Vector Unit** performs vector-vector operations. **Matrix Unit** is mainly composed of RRAM crossbar arrays and executes matrix-vector multiply efficiently. **Transfer Unit** is responsible for inter-core data exchange and synchronization. 
 

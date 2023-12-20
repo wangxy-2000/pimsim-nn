@@ -14,50 +14,50 @@ InstFetch::InstFetch(const sc_module_name& name, const CoreConfig &config,const 
 pc_reg("pc_reg",clk){
     pc_reg.input.bind(pc_in);
     pc_reg.output.bind(pc_out);
-    pc_reg.enable.bind(if_enable);
+    pc_reg.enable.bind(id_ready_port);
 
     pc_reg.setReset(0,pc_reset);
 
 
-    SC_METHOD(process);
+    SC_METHOD(me_processFetchUpdate);
     sensitive << pc_out ;
 
     energy_counter.setStaticPowerMW(config.inst_fetch_static_power);
 }
 
 
-void InstFetch::process() {
+void InstFetch::me_processFetchUpdate() {
     auto cur_pc = pc_out.read();
-
 
     if (cur_pc == inst_buffer_size){
         // finish running
         if (sim_config.sim_mode == 1) {
-            if_stall.write(true);
+            // no more new inst
+            if_id_port.write({DecodeInfo(), false});
+            std::cout<<"core :"<<core_ptr->getCoreID()<< " reached time:"<<sc_time_stamp()<<std::endl;
             return;
         }
+
         // can not reach
-        throw "Inst Fetch Error: Can not reach";
+        throw "Inst Fetch Error: Sim mode 1 Can not reach";
     }
 
+//    std::cout<<getStatus()<<std::endl;
     pc_reset.write(false);
-    if (cur_pc == inst_buffer_size-1 ) {
+    if (sim_config.sim_mode == 0 and cur_pc == inst_buffer_size-1 ) {
         // the last inst
-        if (sim_config.sim_mode == 0){
-            // loop all instructions
+        // loop all instructions
+        // statistic
+        core_ptr->addRunRounds();
+        pc_reset.write(true);
 
-            // statistic
-            core_ptr->addRunRounds();
-            pc_reset.write(true);
-        }
-        else
-            throw "Inst Fetch Error: Can not reach";
+//        std::cout<<getStatus()<<std::endl;
+
     }
-
 
 
     DecodeInfo decode_info = {.pc=cur_pc,.inst=inst_buffer[cur_pc]};
-    if_id_port.write(decode_info);
+    if_id_port.write({decode_info, true});
 
     auto next_pc = cur_pc + 1; // update pc
     pc_in.write(next_pc);
@@ -75,12 +75,12 @@ void InstFetch::setInstBuffer(const std::vector<Instruction>& buffer) {
 
 std::string InstFetch::getStatus() {
     auto cur_pc = pc_out.read();
+    auto inst = inst_buffer[cur_pc];
 
     std::stringstream  s;
 
-
-    s<<"Core:"<<core_ptr->getCoreID()<<" "<<"Fetch>"<<" time:"<<sc_time_stamp().to_string()<<"\n"
-        <<"pc: "<<cur_pc<<" op: "<<inst_buffer[cur_pc].op._to_string()<<" total inst:"<<inst_buffer_size<<std::endl;
+    s<<"Core:"<<core_ptr->getCoreID()<<" "<<"Fetch>"<<" time: "<<sc_time_stamp().to_string()<<"\n";
+    s<<"pc:"<<cur_pc<<"  "<<inst<<"\n";
 
     return s.str();
 }

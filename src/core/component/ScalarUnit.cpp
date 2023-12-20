@@ -12,6 +12,11 @@ ScalarUnit::ScalarUnit(const sc_module_name &name, const CoreConfig &config,cons
     scalar_reg.input.bind(id_scalar_port);
     scalar_reg.output.bind(scalar_reg_out);
 
+    scalar_reg.in_ready.bind(scalar_ready_port);
+    scalar_reg.out_ready.bind(self_ready);
+
+    self_ready.write(true);
+
     SC_METHOD(process);
     sensitive<<scalar_reg_out;
 
@@ -19,7 +24,13 @@ ScalarUnit::ScalarUnit(const sc_module_name &name, const CoreConfig &config,cons
 }
 
 void ScalarUnit::process() {
-    auto scalar_info = scalar_reg_out.read();
+    const auto& cur_info = scalar_reg_out.read();
+
+    if (not cur_info.valid){
+        return;
+    }
+
+    const auto& scalar_info = cur_info.payload;
 
     if (scalar_info.op == +Opcode::nop) // for nop inst, lack of checkInst
         return;
@@ -59,9 +70,9 @@ void ScalarUnit::process() {
 
     reg_file_write_port.write(write_info);
 
-    if (sim_config.sim_mode == 1)
-        if (isEndPC(scalar_info.pc))
-            core_ptr->setFinish();
+//    if (sim_config.sim_mode == 1)
+//        if (isEndPC(scalar_info.pc))
+//            core_ptr->setFinish();
 
     energy_counter.addDynamicEnergyPJ(0,sc_time_stamp(),core_config.period,core_config.scalar_dynamic_power);
 }
@@ -69,10 +80,14 @@ void ScalarUnit::process() {
 std::string ScalarUnit::getStatus() {
     std::stringstream  s;
 
-    auto scalar_info = id_scalar_port.read();
+    const auto& cur_info = id_scalar_port.read();
 
-    s<<"Scalar>"<<" time:"<<sc_time_stamp().to_string()<<"\n"
-    <<"pc:" << scalar_info.pc<<" op:"<<scalar_info.op._to_string()<<"\n\n";
+    if (cur_info.valid){
+        auto scalar_info = cur_info.payload;
+
+        s<<"Scalar>"<<" time:"<<sc_time_stamp().to_string()<<"\n"
+        <<"pc:" << scalar_info.pc<<" op:"<<scalar_info.op._to_string()<<"\n\n";
+    }
 
     return s.str();
 }

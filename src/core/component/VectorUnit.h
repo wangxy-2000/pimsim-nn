@@ -14,6 +14,8 @@
 #include "utils/Register.hpp"
 #include "comm/InitiatorSocket.h"
 #include "utils/FSM.hpp"
+#include "core/payloads/ExecInfo.h"
+#include "utils/PulseSignal.h"
 
 
 using namespace sc_core;
@@ -29,7 +31,7 @@ public:
     void process();
     int getVectorComputeLatencyCyclePower(const VectorInfo& vector_info);
 
-    void checkVectorInst();
+    void me_checkVectorInst();
 
     std::string getStatus();
 
@@ -42,17 +44,20 @@ private:
 
 private:
     // internal register
-    FSM<VectorInfo> vector_fsm_reg;
-    sc_signal<VectorInfo> vector_fsm_out;
-    sc_signal<FSMPayload<VectorInfo>> vector_fsm_in;
+    FSM<ExecInfo> vector_fsm_reg;
+    sc_signal<VP<ExecInfo>> vector_fsm_in;
+
+    PulsePort<ExecInfo> pulse_commit;
 
 
 public:
-    sc_in<VectorInfo> id_vector_port;
+    sc_in<VP<ExecInfo>> vector_port;
 
-    sc_out<bool> vector_busy_port;
+    sc_out<bool> vector_ready_port;
 
-    InitiatorSocket memory_socket ;
+    sc_out<ExecInfo> vector_commit_port;
+
+    InitiatorSocket memory_socket;
 
 };
 

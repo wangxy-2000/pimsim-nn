@@ -34,37 +34,40 @@ int XbarArray::calcXbarArrayLatency(int weight_precision, int input_precision, i
 
     int total_latency_cycle = 0;
 
-    if (config.pipeline_mode){
-        // pipeline mode
-        int dac_times = config.xbar_size.first / config.dac_count;
-        int xbar_read_cycle =  int(ceil(config.xbar_latency/config.period));
-        int single_front_stage_latency_cycle = config.input_buffer_latency_cycle + config.dac_latency_cycle +
-               + xbar_read_cycle + config.sample_hold_latency_cycle;
+    int input_times = divideWithCeiling(input_precision,config.dac_resolution);
+    // one input @ dac_precision
+    int dac_times = divideWithCeiling(config.xbar_size.first,config.dac_count);
+    int adc_times = divideWithCeiling(config.xbar_size.second,config.adc_count);
 
-        int front_stage_latency_cycle = dac_times * single_front_stage_latency_cycle;
-        int back_stage_latency_cycle = (config.xbar_size.second/config.adc_count) * config.adc_latency_cycle + config.shift_adder_latency_cycle + config.output_buffer_latency_cycle;
 
-        auto pipeline_latency_cycle = front_stage_latency_cycle>back_stage_latency_cycle ? front_stage_latency_cycle:back_stage_latency_cycle;
+    int xbar_read_cycle = int(ceil(config.xbar_latency/config.period));
 
-        int input_times = ceil(input_precision / config.dac_resolution);
+    // dac work once
+    int single_front_stage_latency_cycle = config.input_buffer_latency_cycle +
+                                            config.dac_latency_cycle +
+                                            xbar_read_cycle +
+                                            config.sample_hold_latency_cycle ;
 
-        total_latency_cycle = (input_times+1) * pipeline_latency_cycle + config.shift_adder_latency_cycle + config.output_buffer_latency_cycle;
-    //    double total_latency = total_latency_cycle * config.period;
+    // adc read out all xbar values @ dac work once
+    int back_stage_pipe_cycle = std::max(config.adc_latency_cycle, config.shift_adder_latency_cycle+config.output_buffer_latency_cycle);
+    int single_back_stage_latency_cycle = config.adc_latency_cycle+config.shift_adder_latency_cycle+config.output_buffer_latency_cycle+
+                                            (adc_times-1)*back_stage_pipe_cycle;
+
+
+    if(config.pipeline_mode){
+        int stage_pipe_cycle = std::max(single_front_stage_latency_cycle, single_back_stage_latency_cycle);
+
+        int total_times = input_times * dac_times;
+        total_latency_cycle = single_front_stage_latency_cycle + single_back_stage_latency_cycle +
+                            (total_times - 1) * stage_pipe_cycle;
     }
-    else{
-        // plain mode
-        int dac_times = config.xbar_size.first / config.dac_count;
-        int adc_times = config.xbar_size.second / config.adc_count;
+    else {
+        // no pipeline at all (no double sample&hold design)
+        int total_times = input_times * dac_times;
 
-        int xbar_read_cycle = int(ceil(config.xbar_latency/config.period));
-
-        int one_bit_cycle =config.input_buffer_latency_cycle +  dac_times * (config.dac_latency_cycle + xbar_read_cycle + config.sample_hold_latency_cycle) +
-                adc_times * config.adc_latency_cycle + config.shift_adder_latency_cycle + config.output_buffer_latency_cycle;
-
-        int input_times = ceil(input_precision / config.dac_resolution);
-
-        total_latency_cycle = one_bit_cycle*input_times;
+        total_latency_cycle = (single_front_stage_latency_cycle + single_back_stage_latency_cycle) * total_times;
     }
+
     return total_latency_cycle;
 }
 
@@ -79,29 +82,41 @@ double XbarArray::calcXbarArrayEnergy(int weight_precision, int input_precision,
     // one input power
     // total power
 
-    int dac_times = config.xbar_size.first / config.dac_count;
-    double dac_energy = config.dac_dynamic_power * config.dac_latency_cycle * config.period
-                        * config.dac_count * dac_times;
+    double total_energy = 0 ;
 
-    double xbar_read_energy = config.xbar_read_power * config.xbar_latency;
+    int input_times = divideWithCeiling(input_precision,config.dac_resolution);
+    // one input @ dac_precision
+    int dac_times = divideWithCeiling(config.xbar_size.first,config.dac_count);
+    int adc_times = divideWithCeiling(config.xbar_size.second,config.adc_count);
 
-    double sample_hold_energy = config.sample_hold_dynamic_power * config.sample_hold_latency_cycle * config.period;
+    double front_stage_energy = config.period * config.input_buffer_dynamic_power * config.input_buffer_latency_cycle
+                                + config.period * config.dac_dynamic_power * config.dac_latency_cycle * config.dac_count
+                                + config.xbar_read_power * config.xbar_latency
+                                + config.period * config.sample_hold_dynamic_power * config.sample_hold_latency_cycle * config.xbar_size.second;
 
-    int adc_times = config.xbar_size.second / config.adc_count;
-    double adc_energy = config.adc_dynamic_power * config.adc_latency_cycle * config.period
-                        * config.adc_count * adc_times;
+    double back_stage_energy = adc_times * (
+                config.period * config.adc_dynamic_power * config.adc_latency_cycle * config.adc_count
+                + config.period * config.shift_adder_dynamic_power * config.shift_adder_latency_cycle
+                + config.period * config.output_buffer_dynamic_power * config.output_buffer_latency_cycle
+            );
 
-    double shift_adder_energy = config.shift_adder_dynamic_power * config.shift_adder_latency_cycle * config.period * adc_times;
-
-    double buffer_energy = (config.input_buffer_dynamic_power + config.output_buffer_dynamic_power*config.output_buffer_latency_cycle)* config.period;
-
-    double one_bit_energy = dac_energy + xbar_read_energy + sample_hold_energy + adc_energy + shift_adder_energy + buffer_energy;
-
-    int input_times = ceil(input_precision / config.dac_resolution);
-
-    double total_energy = input_times * one_bit_energy;
+    total_energy = (input_times * dac_times) * (front_stage_energy + back_stage_energy);
 
     return total_energy;
 }
 
+int XbarArray::divideWithCeiling(int numerator, int denominator) {
+    if (denominator == 0) {
+        std::cerr << "Error: Division by zero!" << std::endl;
+        return 0;
+    }
+
+    int quotient = numerator / denominator;
+    int remainder = numerator % denominator;
+
+    if (remainder != 0 && ((numerator < 0) != (denominator < 0))) {
+        quotient++;
+    }
+    return quotient;
+}
 

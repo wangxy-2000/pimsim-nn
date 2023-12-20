@@ -13,7 +13,8 @@
 #include <fmt/core.h>
 #include <zstr.hpp>
 #include <ghc/filesystem.hpp>
-//#include <filesystem>
+#include <chrono>
+
 
 //namespace fs = std::filesystem;
 namespace fs = ghc::filesystem;
@@ -24,41 +25,33 @@ Simulator::Simulator(std::string config_file_path_, std::string inst_file_path_)
 }
 
 void Simulator::runSimulation() {
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+
     std::ifstream config_file(config_file_path);
     zstr::ifstream inst_file(inst_file_path,std::ios::binary); // compressed
-//    std::ifstream inst_file(inst_file_path);
-//    zstr::ifstream inst_file(inst_file_path);
 
-    fs::path file_path(inst_file_path);
+
+    fs::path file_path(config_file_path);
     auto parent_path = file_path.parent_path();
 
 
-    std::cout<<"Loading Inst and Config"<<std::endl;
+    std::cout<<"Loading Inst and Config --- "<<std::endl;
 
     nlohmann::json json_inst = nlohmann::json::parse(inst_file);
     nlohmann::json json_config = nlohmann::json::parse(config_file);
 
-
     std::cout<<"Load finish"<<std::endl;
 
     global_config = json_config.get<GlobalConfig>();
-    // set core cnt fit for program inst
-    if (json_inst.contains("config"))
-        global_config.chip_config.core_cnt = json_inst.at("config").at("core_cnt").get<int>();
 
     chip_ptr = std::make_shared<Chip>(global_config.chip_config,global_config.sim_config);
 
-    std::cout<<"Reading Inst From Json"<<std::endl;
-    chip_ptr->readInstFromJson(json_inst);
+    std::cout<<"Reading Instructions From File --- "<<std::endl;
+    chip_ptr->initializeCores(json_inst);
     chip_ptr->network.readLatencyEnergyFile(parent_path.string());
     std::cout<<"Read finish"<<std::endl;
-
-//    auto interval = global_config.sim_config.sim_time/10;
-//    if (is_run_in_gui)
-//        interval = global_config.sim_config.sim_time/100;
-//
-//    Timer timer("timer",interval,sc_core::SC_MS, [this](){ progressBar(); });
-
 
     int levels = is_run_in_gui?100:10;
     ProgressBar bar(SC_MS,levels,global_config.sim_config.sim_time,[this](int progress){
@@ -69,10 +62,15 @@ void Simulator::runSimulation() {
     });
 
 
-    std::cout<<"Start Simulation"<<std::endl;
+    std::cout<<"Start Simulation --- "<<std::endl;
     sc_start(global_config.sim_config.sim_time,sc_core::SC_MS);
     std::cout<<"Simulation Finish"<<std::endl;
-//    std::cout<<getSimulationReport()<<std::endl;
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    double executionTime = duration.count();
+    std::cout<<"simulator execution time:"<<executionTime<<"s"<<std::endl;
+    std::cout<<getSimulationReport()<<std::endl;
 
 }
 
@@ -90,7 +88,6 @@ std::string Simulator::getSimulationReport() {
 
     if (global_config.sim_config.sim_mode == 0)
         s<<fmt::format("  - {:<20}{} ms\n","simulation time:",global_config.sim_config.sim_time);
-
 
 
     return s.str() + chip_ptr->getSimulationReport();

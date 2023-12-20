@@ -30,10 +30,10 @@ RegFile::RegFile(const sc_module_name &name, const CoreConfig &config,const SimC
 }
 
 void RegFile::readValue() {
-    auto last_write= reg_out.read();
-    auto cur_write = reg_file_write_port.read();
+    const auto& last_write= reg_out.read();
+    const auto& cur_write = reg_file_write_port.read();
 
-    auto read_info = reg_file_read_addr_port.read();
+    const auto& read_info = reg_file_read_addr_port.read();
     RegFileReadValue value_info = RegFileReadValue::empty();
     if (!read_info.double_word) {
         int values[] = {0, 0, 0}; // rd rs1 rs2
@@ -41,9 +41,8 @@ void RegFile::readValue() {
 
         for (int i = 0; i < 3; i++) { // first use bypass value then register value
             auto addr = addrs[i];
-            if (addr == 0)
-                values[i] = 0;
-            else if (addr == cur_write.rd_addr)
+
+            if (addr == cur_write.rd_addr)
                 values[i] = cur_write.rd_value;
             else if (addr == last_write.rd_addr)
                 values[i] = last_write.rd_value;
@@ -60,9 +59,7 @@ void RegFile::readValue() {
 
         for (int i=0;i<5;i++){
             auto addr = addrs[i];
-            if (addr == 0)
-                values[i] = 0;
-            else if (addr == cur_write.rd_addr)
+            if (addr == cur_write.rd_addr)
                 values[i] = cur_write.rd_value;
             else if (addr == last_write.rd_addr)
                 values[i] = last_write.rd_value;
@@ -86,14 +83,13 @@ void RegFile::readValue() {
 }
 
 void RegFile::writeValue() {
-    auto cur_write = reg_file_write_port.read();
+    const auto& cur_write = reg_file_write_port.read();
     reg_in.write(cur_write);
     energy_counter.addDynamicEnergyPJ(1,sc_time_stamp(),core_config.period,core_config.reg_file_write_dynamic_power);
 }
 
 void RegFile::updateValue() {
     // bypass , postpone the update time
-    auto last_write = reg_out.read();
-    if (last_write.rd_addr != 0)
-        reg_data[last_write.rd_addr] = last_write.rd_value;
+    const auto& last_write = reg_out.read();
+    reg_data[last_write.rd_addr] = last_write.rd_value;
 }

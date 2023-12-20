@@ -8,131 +8,73 @@
 
 
 
-MatrixUnit::MatrixUnit(const sc_module_name &name, const CoreConfig &config,const SimConfig& sim_config,Core* core_ptr,ClockDomain* clk)
+MatrixUnit::MatrixUnit(const sc_module_name &name, const std::vector<int>& array_group_map_, const CoreConfig &config, const SimConfig& sim_config, Core* core_ptr, ClockDomain* clk)
 : BaseCoreModule(name,config,sim_config,core_ptr,clk),
- memory_socket("memory_socket"),
-  xbar_array(config.matrix_config),
-  matrix_fsm("matrix_fsm",clk){
+  ag_dispatcher("ag_dispatch", array_group_map_.size(), clk), commit_queue("queue", clk), xbar_group_map(array_group_map_),
+  ag_ready_array(array_group_map_.size()), ag_dispatcher_out(array_group_map_.size())
+{
+    int array_group_cnt = xbar_group_map.size();
 
-    matrix_fsm.input.bind(matrix_fsm_in);
-    matrix_fsm.output.bind(matrix_fsm_out);
+    ag_dispatcher.data_in.bind(ag_dispatcher_in);
+    ag_dispatcher.in_ready.bind(matrix_ready_port);
+    commit_queue.out_port.bind(matrix_commit_port);
 
-    SC_THREAD(process);
+    for(int i=0;i<array_group_cnt;i++){
+        auto ag_name = std::string("ag")+std::to_string(i);
+        std::unique_ptr<ArrayGroup> cur_ag_ptr ( new ArrayGroup(ag_name.c_str(), core_config.matrix_config, clk, array_group_map_[i], i, &energy_counter, &commit_queue));
 
-    SC_METHOD(checkMatrixInst);
-    sensitive<<id_matrix_port;
+        ag_dispatcher.data_out_array[i].bind(ag_dispatcher_out[i]);
+        ag_dispatcher.out_ready_array[i].bind(ag_ready_array[i]);
 
-    energy_counter.setStaticPowerMW(xbar_array.getStaticPower()*config.matrix_config.xbar_array_count);
+        cur_ag_ptr->in_ready.bind(ag_ready_array[i]);
+        cur_ag_ptr->fsm_in.bind(ag_dispatcher_out[i]);
 
-}
+        array_groups.push_back(std::move(cur_ag_ptr));
 
-void MatrixUnit::checkMatrixInst() {
-    auto matrix_info = id_matrix_port.read();
-
-    if (is_payload_valid(matrix_info))
-         matrix_fsm_in.write({matrix_info,true});
-    else
-        matrix_fsm_in.write({matrix_info,false});
-
-}
-
-void MatrixUnit::process() {
-    while(true) {
-        // wait for matrix inst
-        wait(matrix_fsm.start_exec);
-
-        // stall pipeline
-        matrix_busy_port.write(true);
-
-        auto matrix_info = matrix_fsm_out.read();
-        auto op = matrix_info.op; // only one op
-
-        // only this one
-        if (op != +Opcode::mvmul)
-            return;
-
-        auto input_bit = matrix_info.input_bitwidth;
-        auto output_bit = matrix_info.output_bitwidth;
-
-        auto input_byte = int(ceil(input_bit /8.0));;
-        auto output_byte = int(ceil(output_bit /8.0));;
-
-        auto read_addr = matrix_info.rs1_value;
-        auto write_addr = matrix_info.rd_value;
-
-        auto mbiw = matrix_info.mbiw;
-        auto group = matrix_info.group;  // currently group means use how many xbar arrays
-        // in the future this will be changed to which group
-
-        auto xbar_weight_shape = xbar_array.getWeightShape(mbiw);
-
-        int read_size = xbar_weight_shape.first * input_byte;
-        int write_size = xbar_weight_shape.second * group * output_byte;
-
-        auto read_trans = TransactionPayload{
-            .command=TransCommand::read,.addr=read_addr,.data_size=read_size,.data_ptr=nullptr
-        };
-
-        auto write_trans = TransactionPayload{
-            .command=TransCommand::write,.addr=write_addr,.data_size=write_size,.data_ptr=nullptr
-        };
-
-        sc_time delay (0,sc_core::SC_NS);
-
-        // read vector
-        memory_socket.transport(read_trans,delay);
-
-        auto compute_latency_cycle = getMatrixComputeLatencyCyclePower(matrix_info);
-        auto compute_latency = compute_latency_cycle * core_config.matrix_config.period;
-
-        delay += sc_time(compute_latency,SC_NS);
-        wait(delay);
-
-        delay = sc_time(0,SC_NS);
-
-        // write back result
-        memory_socket.transport(write_trans,delay);
-        wait(delay);
-
-        // finish exec
-
-        // restore pipeline
-        matrix_busy_port.write(false);
-        // reset fsm
-        matrix_fsm.finish_exec.notify(SC_ZERO_TIME);
-
-        if (sim_config.sim_mode == 1)
-            if (isEndPC(matrix_info.pc))
-                core_ptr->setFinish();
     }
+
+
+    SC_METHOD(me_checkMatrixInst);
+    sensitive<<matrix_port;
+
 }
 
-int MatrixUnit::getMatrixComputeLatencyCyclePower(const MatrixInfo & matrix_info) {
 
-    int weight_precision = matrix_info.mbiw;
-    int input_precision = matrix_info.input_bitwidth;
-    int output_precision = matrix_info.output_bitwidth;
 
-    int count = matrix_info.group;
 
-    auto latency_energy = xbar_array.getXbarArrayLatencyEnergy(weight_precision,
-                                                               input_precision,
-                                                               output_precision);
-
-    energy_counter.addDynamicEnergyPJ(latency_energy.second*count);
-
-    return latency_energy.first;
-}
 
 std::string MatrixUnit::getStatus() {
     std::stringstream s;
 
-    auto matrix_info = matrix_fsm_out.read();
+    const auto& cur_info =  matrix_port.read();
 
-    s<<"Matrix>"<<" time:"<<sc_time_stamp().to_string()<<"\n"
-    <<"pc:"<<matrix_info.pc<<" op:"<<matrix_info.op._to_string()<<"\n\n";
+    if (cur_info.valid){
+        auto exec_info = cur_info.payload;
+        if (exec_info.exec_unit == +ExecType::Matrix){
+            auto matrix_info = exec_info.getMatrixInfo();
+            s<<"Matrix>"<<" time:"<<sc_time_stamp().to_string()<<"\n"
+             <<"pc:"<<matrix_info.pc<<" op:"<<matrix_info.op._to_string()<<"\n\n";
+        }
+
+    }
 
     return s.str();
 }
 
+void MatrixUnit::me_checkMatrixInst() {
+    const auto& cur_info = matrix_port.read();
+
+    if (cur_info.valid and cur_info.payload.exec_unit == +ExecType::Matrix)
+        ag_dispatcher_in.write(cur_info);
+    else
+        ag_dispatcher_in.write({ExecInfo(),false});
+
+}
+
+void MatrixUnit::bindMemorySocket(TargetSocket* target_socket) {
+    for (auto& ag_ptr:array_groups){
+        ag_ptr->memory_socket.bind(target_socket);
+    }
+
+}
 

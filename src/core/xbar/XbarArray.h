@@ -24,6 +24,7 @@ public:
     int calcXbarArrayLatency(int weight_precision,int input_precision,int output_precision);
     double calcXbarArrayEnergy(int weight_precision,int input_precision,int output_precision);
 
+    static int divideWithCeiling(int numerator,int denominator);
     double getStaticPower();
 
 private:

@@ -9,6 +9,7 @@
 
 #include <systemc>
 #include "utils/ClockDomain.h"
+#include "utils/ValidPayload.h"
 using namespace sc_core;
 
 
@@ -177,6 +178,56 @@ public:
     sc_out<T> output;
 };
 
+
+template <typename T>
+class RegPipe:public sc_module{
+    SC_HAS_PROCESS(RegPipe);
+public:
+    RegPipe(const sc_module_name& name,ClockDomain* clk)
+    :sc_module(name),clk(clk),enable(true){
+        SC_METHOD(me_processInput);
+        sensitive<<input;
+        SC_METHOD(me_processOutReady);
+        sensitive<<out_ready;
+
+        SC_METHOD(me_update);
+        sensitive<<trigger;
+
+    }
+
+    void me_update(){
+        if(enable and clk->posedge()){
+            value = input.read();
+            output.write(value);
+        }
+    }
+
+    void me_processOutReady(){
+        const auto& out = out_ready.read();
+        in_ready.write(out); // pass through
+        enable = out;
+        if (enable)
+            clk->notifyNextPosEdge(&trigger);
+    }
+
+    void me_processInput(){
+        clk->notifyNextPosEdge(&trigger);
+    }
+
+private:
+    ClockDomain* clk;
+    T value;
+    sc_event trigger;
+    bool enable;
+
+public:
+    sc_in<T> input;
+    sc_out<T> output;
+
+    sc_out<bool> in_ready;
+    sc_in<bool> out_ready;
+
+};
 
 
 

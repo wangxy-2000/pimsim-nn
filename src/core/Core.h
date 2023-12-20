@@ -23,24 +23,20 @@ class Chip;
 class Core:sc_module {
     SC_HAS_PROCESS(Core);
 public:
-    Core(const sc_module_name& name,const CoreConfig& core_config_,const SimConfig& sim_config_,int core_id,Chip* chip,ClockDomain* clk);
+    Core(const sc_module_name& name, const CoreConfig& core_config_, const SimConfig& sim_config_,
+         int core_id_, const std::vector<int>& array_group_map_, Chip* chip, ClockDomain* clk);
 
     // two methods to initialize inst buffer, use the second one currently
     void setInstBuffer(const std::vector<Instruction>& inst_buffer);
     void readInstFromJson(const nlohmann::json& json_inst);
     void switchBind(Network* network);
 
-    // when sim_mode = 1 use these three functions
-    void setCompoEndPC(int pc);
-    bool isFinish() const;
-    void setFinish();
-
-    sc_time getFinishTime();
-
-    void addRunRounds();
-    int getRunRounds() const;
 
     int getCoreID() const;
+    const SimConfig& getSimConfig() const;
+    const CoreConfig& getCoreConfig() const;
+    const std::vector<int>& getArrayGroupMap() const;
+    int getArrayGroupCount() const;
 
 
     void setEnergyCounter();
@@ -48,11 +44,16 @@ public:
 
     std::string getSimulationReport();
 
+    std::string getStatus();
+
 public:
 
-    Controller controller;
+//    Controller controller;
     InstFetch inst_fetch;
     InstDecode inst_decode;
+    Dispatcher dispatcher;
+
+    ReorderBuffer reorder_buffer;
 
     RegFile reg_file;
     ScalarUnit scalar_unit;
@@ -70,31 +71,57 @@ private:
     const CoreConfig& core_config;
     const SimConfig& sim_config;
 
+    int array_group_cnt;
+    std::vector<int> array_group_map;
+
 private:
-    sc_signal<DecodeInfo> fetch_decode;
-    sc_signal<ScalarInfo> decode_scalar;
-    sc_signal<VectorInfo> decode_vector;
-    sc_signal<MatrixInfo> decode_matrix;
-    sc_signal<TransferInfo> decode_transfer;
+    sc_signal<VP<DecodeInfo>> fetch_decode;
+
+    sc_signal<VP<ScalarInfo>> decode_scalar;
+    sc_signal<VP<ExecInfo>> decode_dispatch;
+
+    sc_signal<VP<ExecInfo>> dispatch_out;
 
     sc_signal<RegFileReadAddr> decode_register;
     sc_signal<RegFileReadValue> register_decode;
     sc_signal<RegFileWrite> scalar_register;
 
-    sc_signal<bool> vector_busy_decode;
-    sc_signal<bool> matrix_busy_decode;
-    sc_signal<bool> transfer_busy_decode;
-    sc_signal<bool> scalar_busy_decode;
+    sc_signal<bool> decode_fetch_ready;
+    sc_signal<bool> dispatch_decode_ready;
 
-    sc_signal<bool> decode_stall_controller;
-    sc_signal<bool> fetch_stall_controller;
+    sc_signal<bool> scalar_decode_ready;
 
-    sc_signal<bool> controller_enable_decode;
-    sc_signal<bool> controller_enable_fetch;
+    sc_signal<bool> vector_dispatch_ready;
+    sc_signal<bool> matrix_dispatch_ready;
+    sc_signal<bool> transfer_dispatch_ready;
+
+
+//    sc_signal<VP<ExecInfo>> dispatch_rob_new;
+    sc_signal<ExecInfo> dispatch_rob_pend;
+    sc_signal<bool> rob_dispatch_is_conflict;
+    sc_signal<bool> rob_dispatch_ready;
+
+    sc_signal<ExecInfo> matrix_rob_commit;
+    sc_signal<ExecInfo> vector_rob_commit;
+    sc_signal<ExecInfo> transfer_rob_commit;
+
+protected:
+    void start_of_simulation () override;
+
+
+public:
+    sc_time getFinishTime();
+    void setFinish();
+    bool isFinish() const;
+    int getMaxPC() const;
+
+    void addRunRounds();
+    int getRunRounds() const;
 
 private:
     bool finish_running = false;
     sc_time finish_time_stamp ;
+    int max_pc = 0;
 
     int run_rounds = 0;
 
@@ -104,7 +131,6 @@ private:
 private:
     Chip* chip_ptr;
     ClockDomain* clk_ptr;
-
 
 };
 

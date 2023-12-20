@@ -16,6 +16,8 @@
 #include "utils/Register.hpp"
 #include "core/payloads/SynchroPayloads.hpp"
 #include "utils/FSM.hpp"
+#include "core/payloads/ExecInfo.h"
+#include "utils/PulseSignal.h"
 
 using namespace sc_core;
 
@@ -27,29 +29,25 @@ class TransferUnit: public BaseCoreModule{
 public:
     TransferUnit(const sc_module_name& name,const CoreConfig& config,const SimConfig& sim_config,Core* core_ptr,ClockDomain* clk,int core_id);
 
-    void checkTransferInst();
+    void me_checkTransferInst();
 
     void process();
 
-    void processSendInst(TransferInfo& transfer_info);
-    void processRecvInst(TransferInfo& transfer_info);
+    void processSendInst(const TransferInfo& transfer_info);
+    void processRecvInst(const TransferInfo& transfer_info);
 
-    void processSyncInst(TransferInfo& transfer_info);
-    void processWaitInst(TransferInfo& transfer_info);
+    void processSyncInst(const TransferInfo& transfer_info);
+    void processWaitInst(const TransferInfo& transfer_info);
 
-    void processGlobalMemoryInst(TransferInfo& transfer_info);
+    void processGlobalMemoryInst(const TransferInfo& transfer_info);
 
     void switchReceiveHandler(std::shared_ptr<NetworkPayload> trans,sc_time& delay);
+
 
     std::string getStatus();
 
 private:
     int core_id;
-
-private:
-    FSM<TransferInfo> transfer_fsm_reg;
-    sc_signal<TransferInfo> transfer_fsm_out;
-    sc_signal<FSMPayload<TransferInfo>> transfer_fsm_in;
 
 private:
     sc_event switch_finish_trigger;
@@ -74,12 +72,20 @@ private:
     std::map<int,int> recv_waiting_sender_map; // <core_id,wait_inst_tag>
     int send_inst_tag = -1; // use pc as tag to identify two send inst
 
+private:
+    FSM<ExecInfo> transfer_fsm_reg;
+    sc_signal<VP<ExecInfo>> transfer_fsm_in;
+
+    PulsePort<ExecInfo> pulse_commit;
+
 public:
-    sc_in<TransferInfo> id_transfer_port;
-    sc_out<bool> transfer_busy_port;
+    sc_in<VP<ExecInfo>> transfer_port;
+    sc_out<bool> transfer_ready_port;
 
     InitiatorSocket memory_socket;
     SwitchSocket switch_socket;
+
+    sc_out<ExecInfo> transfer_commit_port;
 
 
 };

@@ -24,9 +24,11 @@ public:
 
     sc_in<bool> if_stall;
     sc_in<bool> id_stall;
+    sc_in<bool> dispatcher_stall;
 
     sc_out<bool> if_enable;
     sc_out<bool> id_enable;
+    sc_out<bool> dispatcher_enable;
 
 };
 

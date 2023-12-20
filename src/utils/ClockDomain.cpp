@@ -21,11 +21,19 @@ void ClockDomain::process() {
 
         is_pos_edge = true; // for function bool posedge()
 
-        for(const auto& event_ptr:pos_edge_events){
+        std::set<sc_event*> cur_pos_edges_events = pos_edge_events;
+        pos_edge_events.clear();
+
+        for(const auto& event_ptr:cur_pos_edges_events){
             event_ptr->notify(); // immediate notify
+//            std::cout<<"run - "<<sc_time_stamp()<<" "<<event_ptr->name()<<std::endl;
         }
 
-        pos_edge_events.clear();
+
+//        for(const auto& event_ptr : pos_edge_events){
+//            event_ptr->notify();
+//        }
+//        pos_edge_events.clear();
 
 
         end_pos_edge.notify(SC_ZERO_TIME); // next delta cycle
@@ -42,6 +50,7 @@ void ClockDomain::process() {
 
 void ClockDomain::notifyNextPosEdge(sc_event *event_ptr) {
     pos_edge_events.insert(event_ptr);
+//    std::cout<<"add - "<<sc_time_stamp()<<" "<<event_ptr->name()<<std::endl;
 }
 
 bool ClockDomain::posedge() const {

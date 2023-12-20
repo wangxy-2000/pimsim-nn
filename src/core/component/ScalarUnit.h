@@ -28,14 +28,16 @@ public:
 
 
 private:
-    RegNext<ScalarInfo> scalar_reg;
+    RegPipe<VP<ScalarInfo>> scalar_reg;
+//    RegNext<ScalarInfo> scalar_reg;
 
-    sc_signal<ScalarInfo> scalar_reg_out;
+    sc_signal<VP<ScalarInfo>> scalar_reg_out;
+    sc_signal<bool> self_ready;
 
 public:
-    sc_in<ScalarInfo> id_scalar_port;
+    sc_in<VP<ScalarInfo>> id_scalar_port;
     sc_out<RegFileWrite> reg_file_write_port;
-    sc_out<bool> scalar_busy_port;
+    sc_out<bool> scalar_ready_port;
 
 };
 

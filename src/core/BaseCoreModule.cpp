@@ -11,17 +11,6 @@ BaseCoreModule::BaseCoreModule(const sc_module_name &name, const CoreConfig &con
 
 }
 
-void BaseCoreModule::setEndPC(int pc) {
-    end_pc = pc;
-}
-
-int BaseCoreModule::getEndPC() {
-    return end_pc;
-}
-
-bool BaseCoreModule::isEndPC(int pc) {
-    return pc == end_pc;
-}
 
 EnergyCounter BaseCoreModule::getEnergyCounter() {
     return energy_counter;

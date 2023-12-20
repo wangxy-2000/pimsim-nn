@@ -7,6 +7,7 @@
 #ifndef INST_INSTRUCTION_H_
 #define INST_INSTRUCTION_H_
 
+#include <sstream>
 #include <memory>
 #include <map>
 #include "nlohmann/json.hpp"
@@ -71,6 +72,7 @@ struct ScalarField{
 };
 
 struct TransferField{
+    int len = 0 ;
     int size = 0;
     int imm = 0;
     int core = 0; // send/recv/sync
@@ -79,7 +81,7 @@ struct TransferField{
     int wait_value = 0;
     int event_register = 0;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TransferField,size,imm,core,offset,wait_value,event_register);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TransferField,size,imm,len,core,offset,wait_value,event_register);
 
 };
 
@@ -99,16 +101,11 @@ struct Instruction {
     // transfer field
     std::shared_ptr<TransferField> transfer = nullptr;
 
+    InstType inst_type = InstType::nop;
 
     InstType getInstType() {
-//        if (op == +Opcode::nop)
-//            return InstType::nop;
-//        else{
-//            if (inst_type == +InstType::nop)
-//                inst_type =  (*op_to_type.find(op)).second; // const reason
-//            return inst_type;
-//        }
-        inst_type =  (*op_to_type.find(op)).second;
+        if (inst_type == +InstType::nop) // default value, read again
+            inst_type =  (*op_to_type.find(op)).second;
         return inst_type;
     }
 
@@ -156,8 +153,20 @@ struct Instruction {
     }
 
     Instruction() = default;
-private:
-    InstType inst_type = InstType::nop;
+
+
+    friend std::ostream & operator<<(std::ostream & os, const Instruction& inst) {
+        os<<"inst type:"<<inst.inst_type._to_string()<<" opcode:"<<inst.op._to_string();
+
+        if (inst.op == +Opcode::send or inst.op == +Opcode::recv){
+            os <<" core_id:"<<inst.transfer->core;
+        }
+
+        os<<"\n";
+        return os ;
+    }
+
+
 };
 
 

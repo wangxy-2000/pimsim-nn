@@ -15,6 +15,8 @@
 #include "core/component/TransferUnit.h"
 #include "core/component/ScalarUnit.h"
 #include "core/component/RegFile.h"
+#include "core/component/ReorderBuffer.h"
+#include "core/component/Dispatcher.h"
 
 
 

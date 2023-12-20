@@ -23,6 +23,7 @@ public:
     std::string getSimulationReport();
 
     void setRunInGUI(bool mode);
+
 private:
     GlobalConfig global_config;
     std::string config_file_path;

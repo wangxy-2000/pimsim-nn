@@ -75,21 +75,21 @@ struct MemoryConfig{
     double static_power = 1; // mW
 
     int write_latency_cycle = 10; // Cycles
-    double write_dynamic_power = 1.0; // mW
+    double write_dynamic_energy = 0; // pJ
 
     int read_latency_cycle = 8; // Cycles
-    double read_dynamic_power = 1.0; // mW
+    double read_dynamic_energy = 0; // mW
 
     void checkValid(){
-        auto ans = check_positive(memory_size,data_width,period,static_power,write_latency_cycle,write_dynamic_power,read_latency_cycle,read_dynamic_power);
+        auto ans = check_not_negative(memory_size,data_width,period,static_power,write_latency_cycle,write_dynamic_energy,read_latency_cycle,read_dynamic_energy);
         if (!ans) throw "MemoryConfig not valid";
     }
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MemoryConfig,
                                                 memory_size, data_width,
                                                 period, static_power,
-                                                write_latency_cycle, write_dynamic_power,
-                                                read_latency_cycle, read_dynamic_power)
+                                                write_latency_cycle, write_dynamic_energy,
+                                                read_latency_cycle, read_dynamic_energy)
 };
 
 
@@ -197,17 +197,22 @@ struct CoreConfig{
     MatrixUnitConfig matrix_config;
 
     // Vector Unit
-    int vector_width = 32 ;
-    int vector_latency_cycle = 4 ; // Cycles per op
-    double vector_alu_static_power = 1.0; // mW
-    double vector_alu_dynamic_power = 1.0; //mW
-    double vector_reg_static_power = 1.0; //mW
-    double vector_reg_dynamic_power = 1.0; //mW
+    int vector_width = 16 ;
+    int vector_latency_cycle = 8 ; // Cycles per op
+    double vector_alu_static_power = 0; // mW
+    double vector_alu_dynamic_energy = 0; //mW
+    double vector_reg_static_power = 0; //mW
+    double vector_reg_read_dynamic_energy = 0; //pJ
+    double vector_reg_write_dynamic_energy = 0; // pJ
 
     double transfer_static_power = 0;
     double transfer_dynamic_power = 0;
 
     MemoryConfig local_memory_config;
+
+    // ROB
+    int rob_size = 1;
+
 
     // global_memory_id
     int global_memory_switch_id = -10; // for global memory access
@@ -221,8 +226,8 @@ struct CoreConfig{
                 inst_decode_static_power, inst_decode_dynamic_power, inst_decode_offset_static_power, inst_decode_offset_dynamic_power,
                 reg_file_static_power, reg_file_read_dynamic_power, reg_file_write_dynamic_power,
                 scalar_static_power, scalar_dynamic_power,
-                vector_width, vector_latency_cycle, vector_alu_static_power, vector_alu_dynamic_power,
-                vector_reg_static_power, vector_alu_dynamic_power,
+                vector_width, vector_latency_cycle, vector_alu_static_power, vector_alu_dynamic_energy,
+                vector_reg_static_power, vector_reg_write_dynamic_energy,vector_reg_read_dynamic_energy,
                 transfer_static_power, transfer_dynamic_power
                 );
         local_memory_config.checkValid();
@@ -240,10 +245,10 @@ struct CoreConfig{
                                                 reg_file_static_power, reg_file_read_dynamic_power, reg_file_write_dynamic_power,
                                                 scalar_static_power, scalar_dynamic_power,
                                                 matrix_config,
-                                                vector_width, vector_latency_cycle, vector_alu_static_power, vector_alu_dynamic_power,
-                                                vector_reg_static_power, vector_alu_dynamic_power,
+                                                vector_width, vector_latency_cycle, vector_alu_static_power, vector_alu_dynamic_energy,
+                                                vector_reg_static_power, vector_reg_write_dynamic_energy,vector_reg_read_dynamic_energy,
                                                 transfer_static_power, transfer_dynamic_power,
-                                                local_memory_config, global_memory_switch_id
+                                                local_memory_config, rob_size, global_memory_switch_id
                 );
 };
 

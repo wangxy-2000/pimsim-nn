@@ -137,6 +137,7 @@ struct TransferInfo{
     int rd_value ;
     int rs1_value ;
 
+    int len;
     int imm;
     int core ;
     int size ;

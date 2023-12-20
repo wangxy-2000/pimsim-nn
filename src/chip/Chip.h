@@ -23,6 +23,8 @@ public:
 
     void readInstFromJson(const nlohmann::json& json_inst);
 
+    void initializeCores(const nlohmann::json& json_inst);
+
     bool isFinish();
 
     double getRunRounds();
@@ -30,6 +32,13 @@ public:
     void setEnergyCounter();
 
     std::string getSimulationReport();
+
+    std::map<std::string,double> getChipWeightedTime();
+
+    std::string getChipWeightedTimeReport();
+    std::string getCoreWeightedTimeReport();
+
+    void setRunningTime();
 
 
 public:
@@ -45,6 +54,8 @@ public:
 
     const ChipConfig chip_config;
     const SimConfig sim_config;
+
+    sc_time running_time;
 
 
 private:

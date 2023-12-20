@@ -17,7 +17,8 @@ name(name), config(config){
 }
 
 int Network::transfer(int src, int dst, int data_size) {
-//    return 10;
+
+
     auto per_flit_latency = latency_map[{src,dst}]; // unit:ns
     auto per_flit_energy = energy_map[{src,dst}];
     int times = ceil(data_size*1.0/config.bus_width);

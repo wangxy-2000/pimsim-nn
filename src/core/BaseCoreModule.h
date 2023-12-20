@@ -11,6 +11,7 @@
 #include "config/Config.hpp"
 #include "utils/EnergyCounter.h"
 #include "utils/ClockDomain.h"
+#include "utils/ValidPayload.h"
 
 using namespace sc_core;
 
@@ -22,10 +23,6 @@ class BaseCoreModule:public sc_module {
 public:
     BaseCoreModule(const sc_module_name& name,const CoreConfig& config,const SimConfig& sim_config,Core* core_ptr,ClockDomain* clk= nullptr);
 
-    void setEndPC(int pc);
-    int getEndPC();
-
-    bool isEndPC(int pc);
 
     EnergyCounter getEnergyCounter();
 

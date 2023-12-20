@@ -41,14 +41,14 @@ int Memory::getTransLatencyCyclePower(TransactionPayload & trans) {
     auto times = int(ceil(size*1.0/config.data_width));
 
     if (trans.command == +TransCommand::read) {
-        auto read_energy = config.read_dynamic_power * config.read_latency_cycle
-                                * times * config.period;
+        auto read_energy = config.read_dynamic_energy* times;
+
         energy_counter.addDynamicEnergyPJ(read_energy);
         return times * config.read_latency_cycle;
     }
     else if (trans.command == +TransCommand::write){
-        auto write_energy = config.write_dynamic_power * config.write_latency_cycle
-                           * times * config.period;
+        auto write_energy = config.write_dynamic_energy * times;
+
         energy_counter.addDynamicEnergyPJ(write_energy);
         return times*config.write_latency_cycle;
     }

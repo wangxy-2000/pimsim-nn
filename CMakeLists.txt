@@ -22,7 +22,6 @@ target_include_directories(pimsim-nn PRIVATE
         )
 
 
-
 # header-only dependency
 target_include_directories(pimsim-nn PUBLIC packages/header-only)
 target_include_directories(pimsim-nn PUBLIC packages/header-only/zstr/src)
@@ -64,6 +63,11 @@ target_sources(pimsim-nn PRIVATE
         src/utils/EnergyCounter.cpp
         src/utils/Timer.cpp
         src/isa/Instruction.cpp
+        src/core/payloads/ExecInfo.cpp
+        src/analysis/PerformanceCounter.cpp
+        src/core/xbar/ArrayGroup.cpp
+        src/core/component/ReorderBuffer.cpp 
+        src/core/component/Dispatcher.cpp
         )
 
 
@@ -85,7 +89,7 @@ target_link_libraries(ChipTest PRIVATE
 #)
 
 target_sources(ChipTest PRIVATE
-    test/ChipTest.cpp
+    src/ChipTest.cpp
 )
 
 # compress

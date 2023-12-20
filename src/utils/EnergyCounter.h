@@ -39,9 +39,13 @@ public:
     void initialize();
 public:
     EnergyCounter& operator += (const EnergyCounter& ano);
-private:
+    friend std::ostream& operator << (std::ostream& out,const EnergyCounter& counter);
 
-    double static_power = 0;
+
+
+public:
+
+    double static_power = 0; // mW
 
     double dynamic_energy = 0; // pJ
 

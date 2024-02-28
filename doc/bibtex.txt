@@ -2,5 +2,5 @@
   title = {{PIMSIM-NN: An ISA-based Simulation Framework for Processing-in-Memory Accelerators}},
   booktitle = {2024 Design, Automation and Test in Europe Conference (DATE'24)},
   author = {Xinyu Wang and Xiaotian Sun and Yinhe Han and Xiaoming Chen},
-  year = {2020},
+  year = {2024},
 }

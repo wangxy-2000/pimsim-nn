@@ -102,6 +102,10 @@ There are some parameters in architecture configuration file to change simulatio
 | sim_mode             | When set to `0`, simulator assumes enough input samples and reports throughout rate. When set to `1`,  simulator will only process one input sample and gives its latency. |
 | report_verbose_level | When set to `0`, simulator will only give chip level performance and power consumption statistics. When set to `1`, simulator will also give core level statistics. |
 
+## Citing pimsim-nn
+
+[1] Xinyu Wang, Xiaotian Sun, Yinhe Han, Xiaoming Chen, "PIMSIM-NN: An ISA-based Simulation Framework for Processing-in-Memory Accelerators", in Design, Automation, and Test in Europe (DATE’24).
+
 ## Code Author
 - [Xinyu Wang](wangxinyu22s@ict.ac.cn) (Institute of Computing Technology, Chinese Academy of Sciences)
 

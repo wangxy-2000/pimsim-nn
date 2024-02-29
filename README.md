@@ -104,7 +104,7 @@ There are some parameters in architecture configuration file to change simulatio
 
 ## Citing pimsim-nn
 
-[1] Xinyu Wang, Xiaotian Sun, Yinhe Han, Xiaoming Chen, ["PIMSIM-NN: An ISA-based Simulation Framework for Processing-in-Memory Accelerators"](https://github.com/wangxy-2000/pimsim-nn/blob/main/doc/DATE_LBR.pdf), in Design, Automation, and Test in Europe (DATE'24).  [[Bibtex](https://github.com/wangxy-2000/pimsim-nn/blob/main/doc/bibtex.txt)]
+[1] Xinyu Wang, Xiaotian Sun, Yinhe Han, Xiaoming Chen, ["PIMSIM-NN: An ISA-based Simulation Framework for Processing-in-Memory Accelerators"](https://github.com/wangxy-2000/pimsim-nn/blob/main/doc/DATE_LBR.pdf), in Design, Automation, and Test in Europe (DATE'24).  [[Bibtex](https://github.com/wangxy-2000/pimsim-nn/blob/main/doc/bibtex.txt)] [[ArXiv](https://arxiv.org/abs/2402.18089)]
 
 ## Code Author
 - [Xinyu Wang](wangxinyu22s@ict.ac.cn) (Institute of Computing Technology, Chinese Academy of Sciences)
